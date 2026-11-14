@@ -1,0 +1,25 @@
+# Worker Cloudflare du live (offre gratuite).
+# Déploiement : voir relay/README.md, section "Live à la minute".
+name = "fanaroundtheworld-live"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[triggers]
+crons = ["* * * * *"] # chaque minute
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "fanaroundtheworld-live"
+
+[vars]
+# Adresse GitHub Pages du dépôt de données (calendriers publiés par GitHub Actions).
+DAILY_BASE_URL = "https://macgama.github.io/fanaroundtheworld-data"
+# Le compte API-Football (offre Pro, 7 500 requêtes/jour) est partagé avec thebestfan.
+# Budget max du live par jour (1 appel/min pendant les matchs = 1 440 au pire).
+DAILY_BUDGET = "4000"
+# Le live s'arrête si le compte n'a plus que ce nombre de requêtes (laissées à thebestfan).
+ACCOUNT_RESERVE = "1500"
+# Minutes minimum entre deux appels (mettre 15 avec l'offre gratuite à 100 appels/jour).
+MIN_INTERVAL_MIN = "1"
+
+# Secret (jamais dans ce fichier) : wrangler secret put API_FOOTBALL_KEY

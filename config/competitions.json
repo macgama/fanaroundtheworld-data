@@ -1,0 +1,42 @@
+{
+  "_comment": "provider = 'apifootball' (clé requise, live mondial) ou 'free' (openfootball + OpenLigaDB). Les identifiants de ligue API-Football sont à vérifier avec 'npm run leagues' une fois la clé en place.",
+  "provider": "apifootball",
+  "days_back": 1,
+  "days_ahead": 7,
+  "apifootball": {
+    "leagues": "allowlist"
+  },
+  "competitions": [
+    { "id": "world-cup", "name": "Coupe du monde", "area": "World", "type": "international", "apifootball": { "league": 1 }, "openfootball": { "repo": "worldcup.json", "path": "2026/worldcup.json" } },
+    { "id": "euro", "name": "Championnat d'Europe", "area": "Europe", "type": "international", "apifootball": { "league": 4 } },
+    { "id": "nations-league", "name": "Ligue des nations UEFA", "area": "Europe", "type": "international", "apifootball": { "league": 5 } },
+    { "id": "copa-america", "name": "Copa América", "area": "South America", "type": "international", "apifootball": { "league": 9 } },
+    { "id": "afcon", "name": "Coupe d'Afrique des nations", "area": "Africa", "type": "international", "apifootball": { "league": 6 } },
+    { "id": "friendlies", "name": "Matchs amicaux internationaux", "area": "World", "type": "international", "apifootball": { "league": 10 } },
+    { "id": "ucl", "name": "Ligue des champions UEFA", "area": "Europe", "type": "continental", "apifootball": { "league": 2 } },
+    { "id": "uel", "name": "Ligue Europa UEFA", "area": "Europe", "type": "continental", "apifootball": { "league": 3 } },
+    { "id": "uecl", "name": "Ligue Conférence UEFA", "area": "Europe", "type": "continental", "apifootball": { "league": 848 } },
+    { "id": "libertadores", "name": "Copa Libertadores", "area": "South America", "type": "continental", "apifootball": { "league": 13 } },
+    { "id": "sudamericana", "name": "Copa Sudamericana", "area": "South America", "type": "continental", "apifootball": { "league": 11 } },
+    { "id": "caf-cl", "name": "Ligue des champions CAF", "area": "Africa", "type": "continental", "apifootball": { "league": 12 } },
+    { "id": "afc-cl", "name": "Ligue des champions AFC", "area": "Asia", "type": "continental", "apifootball": { "league": 17 } },
+    { "id": "concacaf-cc", "name": "Coupe des champions CONCACAF", "area": "North America", "type": "continental", "apifootball": { "league": 16 } },
+    { "id": "club-world-cup", "name": "Coupe du monde des clubs", "area": "World", "type": "continental", "apifootball": { "league": 15 } },
+    { "id": "en.1", "name": "Angleterre D1", "area": "England", "type": "league", "timezone": "Europe/London", "apifootball": { "league": 39 }, "openfootball": { "path": "2026-27/en.1.json" } },
+    { "id": "es.1", "name": "Espagne D1", "area": "Spain", "type": "league", "timezone": "Europe/Madrid", "apifootball": { "league": 140 }, "openfootball": { "path": "2026-27/es.1.json" } },
+    { "id": "it.1", "name": "Italie D1", "area": "Italy", "type": "league", "timezone": "Europe/Rome", "apifootball": { "league": 135 }, "openfootball": { "path": "2026-27/it.1.json" } },
+    { "id": "de.1", "name": "Allemagne D1", "area": "Germany", "type": "league", "timezone": "Europe/Berlin", "apifootball": { "league": 78 }, "openligadb": { "league": "bl1", "season": 2026 } },
+    { "id": "fr.1", "name": "France D1", "area": "France", "type": "league", "timezone": "Europe/Paris", "apifootball": { "league": 61 }, "openfootball": { "path": "2026-27/fr.1.json" } },
+    { "id": "pt.1", "name": "Portugal D1", "area": "Portugal", "type": "league", "timezone": "Europe/Lisbon", "apifootball": { "league": 94 }, "openfootball": { "path": "2026-27/pt.1.json" } },
+    { "id": "nl.1", "name": "Pays-Bas D1", "area": "Netherlands", "type": "league", "timezone": "Europe/Amsterdam", "apifootball": { "league": 88 }, "openfootball": { "path": "2026-27/nl.1.json" } },
+    { "id": "be.1", "name": "Belgique D1", "area": "Belgium", "type": "league", "apifootball": { "league": 144 } },
+    { "id": "sco.1", "name": "Écosse D1", "area": "Scotland", "type": "league", "apifootball": { "league": 179 } },
+    { "id": "tr.1", "name": "Turquie D1", "area": "Turkey", "type": "league", "apifootball": { "league": 203 } },
+    { "id": "br.1", "name": "Brésil D1", "area": "Brazil", "type": "league", "apifootball": { "league": 71 } },
+    { "id": "ar.1", "name": "Argentine D1", "area": "Argentina", "type": "league", "apifootball": { "league": 128 } },
+    { "id": "us.1", "name": "États-Unis D1", "area": "USA", "type": "league", "apifootball": { "league": 253 } },
+    { "id": "mx.1", "name": "Mexique D1", "area": "Mexico", "type": "league", "apifootball": { "league": 262 } },
+    { "id": "jp.1", "name": "Japon D1", "area": "Japan", "type": "league", "apifootball": { "league": 98 } },
+    { "id": "sa.1", "name": "Arabie saoudite D1", "area": "Saudi Arabia", "type": "league", "apifootball": { "league": 307 } }
+  ]
+}
