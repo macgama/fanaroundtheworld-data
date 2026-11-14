@@ -7,9 +7,14 @@ compatibility_date = "2026-10-01"
 [triggers]
 crons = ["* * * * *"] # chaque minute
 
-[[r2_buckets]]
-binding = "BUCKET"
-bucket_name = "fanaroundtheworld-live"
+# Stockage du live : Durable Object SQLite (offre gratuite, pas de carte bancaire).
+[[durable_objects.bindings]]
+name = "LIVE"
+class_name = "LiveStore"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["LiveStore"]
 
 [vars]
 # Adresse GitHub Pages du dépôt de données (calendriers publiés par GitHub Actions).
@@ -22,4 +27,5 @@ ACCOUNT_RESERVE = "1500"
 # Minutes minimum entre deux appels (mettre 15 avec l'offre gratuite à 100 appels/jour).
 MIN_INTERVAL_MIN = "1"
 
-# Secret (jamais dans ce fichier) : wrangler secret put API_FOOTBALL_KEY
+# Secret (jamais dans ce fichier) : API_FOOTBALL_KEY, à ajouter dans le tableau de bord
+# Cloudflare (Workers & Pages -> fanaroundtheworld-live -> Settings -> Variables and Secrets).

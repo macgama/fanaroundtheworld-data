@@ -67,22 +67,18 @@ Le compteur se remet à zéro chaque jour à minuit UTC.
 2. Dans **Settings → Pages → Source**, choisis **GitHub Actions**.
 3. Dans l'onglet **Actions**, ouvre « Calendriers et résultats » et clique sur **Run workflow**. Les fichiers apparaissent ensuite sur `https://macgama.github.io/fanaroundtheworld-data/index.json`.
 
-### 2. Live à la minute (Cloudflare, gratuit)
+### 2. Live à la minute (Cloudflare, gratuit, sans carte bancaire)
 
-1. Crée un compte Cloudflare gratuit et active **R2**. Cloudflare demande une carte bancaire pour R2, mais l'usage du relais reste dans l'offre gratuite : moins de 150 000 écritures par mois pour 1 million inclus.
-2. Crée un bucket R2 nommé `fanaroundtheworld-live`.
-3. Dans le dossier `worker/`, lance :
-   ```
-   npx wrangler login
-   npx wrangler secret put API_FOOTBALL_KEY
-   npx wrangler deploy
-   ```
-4. Le live est ensuite servi à l'adresse `https://fanaroundtheworld-live.<ton-compte>.workers.dev/live.json`. L'adresse `/health` affiche le quota consommé.
+Le live est gardé dans un Durable Object, un petit stockage inclus dans l'offre gratuite des Workers. Ça évite R2, qui exige une carte bancaire.
 
-**Limite à connaître :** l'offre gratuite des Workers accepte 100 000 requêtes par jour. Si chaque joueur interroge `live.json` toutes les minutes, cela correspond à environ 70 joueurs connectés en permanence. Largement assez pour le développement et les tests. Avant le lancement, il y a deux solutions :
+1. Dans le dossier `worker/`, lance `npx wrangler login`, puis `npx wrangler deploy`.
+2. Ajoute la clé dans le tableau de bord Cloudflare : **Workers & Pages → fanaroundtheworld-live → Settings → Variables and Secrets → Add**. Type : Secret, nom : `API_FOOTBALL_KEY`.
+3. Le live est ensuite servi à l'adresse `https://fanaroundtheworld-live.<ton-sous-domaine>.workers.dev/live.json`. L'adresse `/health` affiche le quota consommé.
+
+**Limite à connaître :** l'offre gratuite accepte 100 000 requêtes par jour, et le cache de Cloudflare ne fonctionne pas sur les adresses `workers.dev`. Si chaque joueur interroge `live.json` toutes les minutes, cela correspond à environ 70 joueurs connectés en permanence. Largement assez pour le développement et les tests. Avant le lancement, il y a deux solutions :
 
 - **Workers payant** : 5 $ par mois pour 10 millions de requêtes ;
-- **R2 public derrière un nom de domaine** (environ 10 € par an) : les lectures passent par le cache de Cloudflare, sans limite et sans passer par le Worker.
+- **Un nom de domaine** (environ 10 € par an) : le cache de Cloudflare absorbe alors les lectures. Le code est déjà prêt pour ça.
 
 ## Choisir les compétitions
 

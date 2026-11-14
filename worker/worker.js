@@ -1,7 +1,10 @@
-// Worker Cloudflare (offre gratuite) :
-//   - chaque minute (cron) : un tour de live -> live.json stocké dans R2
-//   - GET /live.json : sert le fichier à tous les joueurs, avec cache 30 s
-// La clé API-Football est un secret Cloudflare (wrangler secret put API_FOOTBALL_KEY).
+// Worker Cloudflare (offre gratuite, sans carte bancaire) :
+//   - chaque minute (cron) : un tour de live -> live.json gardé dans un Durable Object
+//   - GET /live.json : sert le fichier à tous les joueurs
+// Le stockage passe par un Durable Object SQLite (inclus dans l'offre gratuite),
+// ce qui évite R2, qui exige une carte bancaire.
+// La clé API-Football est un secret Cloudflare (API_FOOTBALL_KEY).
+import { DurableObject } from "cloudflare:workers";
 import config from "../config/competitions.json";
 import { tick } from "../src/live.js";
 import * as apifootball from "../src/sources/apifootball.js";
@@ -12,10 +15,24 @@ const LIVE_KEY = "live.json";
 const PRIVATE_KEY = "_private/live-state.json"; // live avec horodatages internes
 const STATE_KEY = "_private/quota.json";
 
-async function getJson(bucket, key) {
-  const obj = await bucket.get(key);
-  return obj ? obj.json() : null;
+/** Petit stockage clé -> texte, une seule instance pour tout le relais. */
+export class LiveStore extends DurableObject {
+  async getText(key) {
+    return (await this.ctx.storage.get(key)) ?? null;
+  }
+  async putText(key, value) {
+    await this.ctx.storage.put(key, value);
+  }
 }
+
+const store = (env) => env.LIVE.get(env.LIVE.idFromName("live"));
+
+async function getJson(env, key) {
+  const text = await store(env).getText(key);
+  return text ? JSON.parse(text) : null;
+}
+
+const putJson = (env, key, value) => store(env).putText(key, JSON.stringify(value));
 
 function deps(env, nowMs) {
   const base = env.DAILY_BASE_URL.replace(/\/$/, "");
@@ -31,14 +48,12 @@ function deps(env, nowMs) {
       );
       return lists.flat();
     },
-    loadPrevious: () => getJson(env.BUCKET, PRIVATE_KEY),
-    loadState: () => getJson(env.BUCKET, STATE_KEY),
-    saveState: (s) => env.BUCKET.put(STATE_KEY, JSON.stringify(s)),
+    loadPrevious: () => getJson(env, PRIVATE_KEY),
+    loadState: () => getJson(env, STATE_KEY),
+    saveState: (s) => putJson(env, STATE_KEY, s),
     saveLive: async (publicJson, privateJson) => {
-      await env.BUCKET.put(LIVE_KEY, JSON.stringify(publicJson), {
-        httpMetadata: { contentType: "application/json" },
-      });
-      await env.BUCKET.put(PRIVATE_KEY, JSON.stringify(privateJson));
+      await putJson(env, LIVE_KEY, publicJson);
+      await putJson(env, PRIVATE_KEY, privateJson);
     },
     fetchFixturesByIds: (ids, opts) => apifootball.byIds(ids, env.API_FOOTBALL_KEY, opts),
   };
@@ -55,17 +70,16 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === "/health") {
-      const state = await getJson(env.BUCKET, STATE_KEY);
+      const state = await getJson(env, STATE_KEY);
       return Response.json({ ok: true, quota: state }, { headers: CORS });
     }
     if (url.pathname !== "/live.json") return new Response("Not found", { status: 404, headers: CORS });
 
-    // Le cache de Cloudflare absorbe les lectures : R2 n'est lu qu'une fois par 30 s et par datacenter.
+    // Avec un nom de domaine, le cache de Cloudflare absorbe les lectures (inactif sur *.workers.dev).
     const cache = caches.default;
     const hit = await cache.match(request);
     if (hit) return hit;
-    const obj = await env.BUCKET.get(LIVE_KEY);
-    const body = obj ? await obj.text() : JSON.stringify({ schema: 1, matches: [], in_play: 0 });
+    const body = (await store(env).getText(LIVE_KEY)) ?? JSON.stringify({ schema: 1, matches: [], in_play: 0 });
     const res = new Response(body, {
       headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=30", ...CORS },
     });
