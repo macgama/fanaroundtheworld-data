@@ -73,7 +73,7 @@ Le live est gardé dans un Durable Object, un petit stockage inclus dans l'offre
 
 1. Dans le dossier `worker/`, lance `npx wrangler login`, puis `npx wrangler deploy`.
 2. Ajoute la clé dans le tableau de bord Cloudflare : **Workers & Pages → fanaroundtheworld-live → Settings → Variables and Secrets → Add**. Type : Secret, nom : `API_FOOTBALL_KEY`.
-3. Le live est ensuite servi à l'adresse `https://fanaroundtheworld-live.<ton-sous-domaine>.workers.dev/live.json`. L'adresse `/health` affiche le quota consommé.
+3. Le live est ensuite servi à l'adresse `https://fanaroundtheworld-live.gael-manigley.workers.dev/live.json`. L'adresse `/health` affiche le quota consommé.
 
 **Limite à connaître :** l'offre gratuite accepte 100 000 requêtes par jour, et le cache de Cloudflare ne fonctionne pas sur les adresses `workers.dev`. Si chaque joueur interroge `live.json` toutes les minutes, cela correspond à environ 70 joueurs connectés en permanence. Largement assez pour le développement et les tests. Avant le lancement, il y a deux solutions :
 
