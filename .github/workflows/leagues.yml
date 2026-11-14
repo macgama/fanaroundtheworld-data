@@ -1,0 +1,22 @@
+# Lancement manuel uniquement : liste les compétitions en cours chez API-Football
+# (1 requête) pour choisir les identifiants de config/competitions.json.
+name: Lister les ligues API-Football
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  leagues:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node src/leagues.js --print
+        env:
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: leagues-current
+          path: config/leagues-current.json

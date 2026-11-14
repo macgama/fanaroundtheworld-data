@@ -19,3 +19,6 @@ const rows = (data.response ?? [])
   .sort((a, b) => (a.country ?? "").localeCompare(b.country ?? "") || a.id - b.id);
 await writeFile("config/leagues-current.json", JSON.stringify(rows, null, 2));
 console.log(`${rows.length} compétitions en cours écrites dans config/leagues-current.json`);
+if (process.argv.includes("--print")) {
+  for (const r of rows) console.log([r.country, r.id, r.type, r.name].join(" | "));
+}
