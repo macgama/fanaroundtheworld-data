@@ -41,6 +41,8 @@ Un match a le même `id` dans `days/` et dans `live.json`. Le jeu charge le jour
 }
 ```
 
+Dans `live.json` seulement, chaque match a aussi `first_goal` : l'équipe qui a marqué en premier, `{ "team": "home", "minute": 23 }`, ou `null` (pas encore de but, ou impossible à savoir). Le Worker le déduit du passage de 0-0 à 1-0 ou 0-1 entre deux tours, sans appel API en plus. Le jeu s'en sert pour les pronostics. Les noms des buteurs ne sont jamais publiés, ce sont des personnes réelles.
+
 Les valeurs possibles de `status` sont `SCHEDULED`, `LIVE`, `HALFTIME`, `FINISHED`, `POSTPONED`, `SUSPENDED`, `CANCELLED` et `UNKNOWN`. Les noms d'équipes sont les noms réels. Le jeu les remplace par ses noms fictifs grâce à une table de correspondance indexée par `home.id` et `away.id`.
 
 ## Budget de requêtes API-Football (offre Pro : 7 500 par jour, compte partagé avec thebestfan)

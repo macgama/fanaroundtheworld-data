@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { tick, shouldPoll, expectedInPlay } from "../src/live.js";
+import { tick, shouldPoll, expectedInPlay, firstGoal } from "../src/live.js";
 import { Status } from "../src/model.js";
 import { afFixture } from "./helpers.js";
 
@@ -101,4 +101,33 @@ test("fenêtre de match : 5 min avant à 2 h 30 après le coup d'envoi", () => {
     { ...scheduled("d", "2026-11-14T20:00:00Z"), status: Status.POSTPONED },
   ];
   assert.deepEqual(expectedInPlay(list, T).map((m) => m.id), ["a", "b"]);
+});
+
+test("premier but : déduit du passage de 0-0 à 1-0, gardé jusqu'à la fin", async () => {
+  let current = { response: [afFixture(1, 61, "1H", 10, [0, 0])] };
+  const { deps, store } = memoryDeps({
+    schedule: [scheduled("af:1", "2026-11-14T20:00:00Z")],
+    live: () => current,
+    byIds: { response: [afFixture(1, 61, "FT", 90, [2, 1])] },
+  });
+  await tick({ config, env, nowMs: T, deps });
+  assert.equal(store.pub.matches[0].first_goal, null);
+  current = { response: [afFixture(1, 61, "1H", 11, [0, 1])] };
+  await tick({ config, env, nowMs: T + 60000, deps });
+  assert.deepEqual(store.pub.matches[0].first_goal, { team: "away", minute: 11 });
+  current = { response: [afFixture(1, 61, "2H", 70, [2, 1])] };
+  await tick({ config, env, nowMs: T + 120000, deps });
+  current = { response: [] };
+  await tick({ config, env, nowMs: T + 180000, deps });
+  assert.equal(store.pub.matches[0].status, Status.FINISHED);
+  assert.deepEqual(store.pub.matches[0].first_goal, { team: "away", minute: 11 });
+});
+
+test("premier but : inconnu si le match est pris en cours à 1-1", () => {
+  const m = (h, a, minute = 50) => ({ id: "af:1", minute, score: { current: { home: h, away: a } } });
+  assert.equal(firstGoal(null, m(1, 1)), null);
+  assert.deepEqual(firstGoal(null, m(2, 0)), { team: "home", minute: null });
+  assert.deepEqual(firstGoal(null, m(0, 1, 33)), { team: "away", minute: 33 });
+  assert.equal(firstGoal(m(0, 0), m(1, 1)), null);
+  assert.equal(firstGoal(null, m(0, 0)), null);
 });

@@ -57,9 +57,38 @@ export function countCall(state, nowMs, n = 1, remaining = null) {
 export function mergeLive(previous, fresh, finals, nowMs) {
   const byId = new Map();
   for (const m of previous ?? []) byId.set(m.id, m);
-  for (const m of finals ?? []) byId.set(m.id, { ...m, _seen_ms: nowMs });
-  for (const m of fresh) byId.set(m.id, { ...m, _seen_ms: nowMs });
+  const update = (m) => {
+    const prev = byId.get(m.id);
+    byId.set(m.id, { ...m, first_goal: firstGoal(prev, m), _seen_ms: nowMs });
+  };
+  for (const m of finals ?? []) update(m);
+  for (const m of fresh) update(m);
   return [...byId.values()].filter((m) => nowMs - (m._seen_ms ?? 0) <= KEEP_FINISHED_MS);
+}
+
+/**
+ * Équipe qui a marqué le premier but ({ team: "home" | "away", minute }), ou null.
+ * Déduit du passage de 0-0 à 1-0 / 0-1 entre deux tours (sans appel en plus),
+ * ou du score quand une seule équipe a marqué. Sert aux pronostics du jeu.
+ * Jamais de nom de buteur : ce sont des personnes réelles.
+ */
+export function firstGoal(prev, next) {
+  if (prev?.first_goal) return prev.first_goal;
+  const now = next?.score?.current;
+  if (!now) return null;
+  const total = now.home + now.away;
+  if (total === 0) return null;
+  const minute = next.minute ?? null;
+  const before = prev?.score?.current;
+  if (before && before.home + before.away === 0) {
+    if (now.home > 0 && now.away === 0) return { team: "home", minute };
+    if (now.away > 0 && now.home === 0) return { team: "away", minute };
+    return null; // deux buts en une minute, un de chaque côté : on ne sait pas
+  }
+  // Pas vu à 0-0 (relais arrêté, match pris en cours) : sûr seulement si une seule équipe a marqué.
+  if (now.away === 0) return { team: "home", minute: total === 1 ? minute : null };
+  if (now.home === 0) return { team: "away", minute: total === 1 ? minute : null };
+  return null;
 }
 
 export function vanished(previous, fresh) {
