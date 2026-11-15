@@ -27,5 +27,8 @@ ACCOUNT_RESERVE = "1500"
 # Minutes minimum entre deux appels (mettre 15 avec l'offre gratuite à 100 appels/jour).
 MIN_INTERVAL_MIN = "1"
 
+# Secret optionnel GITHUB_DISPATCH_TOKEN : jeton GitHub (fine-grained, dépôt fanaroundtheworld-data,
+# permission Actions en écriture). Il permet au Worker de relancer la mise à jour des calendriers
+# quand GitHub saute un passage planifié.
 # Secret (jamais dans ce fichier) : API_FOOTBALL_KEY, à ajouter dans le tableau de bord
 # Cloudflare (Workers & Pages -> fanaroundtheworld-live -> Settings -> Variables and Secrets).

@@ -80,6 +80,18 @@ Le live est gardé dans un Durable Object, un petit stockage inclus dans l'offre
 - **Workers payant** : 5 $ par mois pour 10 millions de requêtes ;
 - **Un nom de domaine** (environ 10 € par an) : le cache de Cloudflare absorbe alors les lectures. Le code est déjà prêt pour ça.
 
+### 3. Chien de garde des calendriers (recommandé)
+
+GitHub ne garantit pas ses déclenchements planifiés : il lui arrive de les retarder ou de les sauter. Le 15/11/2026, trois passages d'affilée ont été sautés. Le Worker, qui tourne chaque minute, vérifie donc toutes les 15 minutes la date de `index.json`. Si la dernière publication a plus de 3 h 30, il relance lui-même le workflow.
+
+Pour activer ce contrôle, il faut lui donner un jeton GitHub limité à ce seul usage :
+
+1. Sur GitHub : **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+2. Repository access : **Only select repositories** → `fanaroundtheworld-data`. Permissions : **Actions → Read and write**. Rien d'autre.
+3. Sur Cloudflare : ajoute ce jeton comme secret `GITHUB_DISPATCH_TOKEN` du Worker, au même endroit que `API_FOOTBALL_KEY`.
+
+L'adresse `/health` indique `"watchdog_enabled": true` quand le contrôle est actif.
+
 ## Choisir les compétitions
 
 `config/competitions.json` contient la liste de départ : grandes D1, coupes continentales et compétitions de sélections. Pour couvrir **toutes les D1 de tous les pays** :

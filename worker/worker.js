@@ -10,10 +10,12 @@ import { tick } from "../src/live.js";
 import * as apifootball from "../src/sources/apifootball.js";
 import { fetchJson } from "../src/http.js";
 import { isoDay } from "../src/time.js";
+import { watchdog, dispatchWorkflow, CHECK_EVERY_MIN } from "../src/watchdog.js";
 
 const LIVE_KEY = "live.json";
 const PRIVATE_KEY = "_private/live-state.json"; // live avec horodatages internes
 const STATE_KEY = "_private/quota.json";
+const WATCHDOG_KEY = "_private/watchdog.json";
 
 /** Petit stockage clé -> texte, une seule instance pour tout le relais. */
 export class LiveStore extends DurableObject {
@@ -65,13 +67,30 @@ export default {
   async scheduled(_event, env, ctx) {
     const nowMs = Date.now();
     ctx.waitUntil(tick({ config, env, nowMs, deps: deps(env, nowMs), log: console.log }));
+    // Chien de garde des calendriers (toutes les 15 min, seulement si le jeton GitHub est configuré).
+    if (env.GITHUB_DISPATCH_TOKEN && new Date(nowMs).getUTCMinutes() % CHECK_EVERY_MIN === 0) {
+      const base = env.DAILY_BASE_URL.replace(/\/$/, "");
+      ctx.waitUntil(
+        watchdog({
+          nowMs,
+          log: console.log,
+          deps: {
+            loadIndex: () => fetchJson(`${base}/index.json?t=${nowMs}`, { retries: 1 }),
+            loadState: () => getJson(env, WATCHDOG_KEY),
+            saveState: (s) => putJson(env, WATCHDOG_KEY, s),
+            dispatch: () => dispatchWorkflow({ token: env.GITHUB_DISPATCH_TOKEN, repo: env.GITHUB_REPO ?? "macgama/fanaroundtheworld-data" }),
+          },
+        }).catch((e) => console.log(`chien de garde : échec ${e.message}`)),
+      );
+    }
   },
 
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === "/health") {
       const state = await getJson(env, STATE_KEY);
-      return Response.json({ ok: true, quota: state }, { headers: CORS });
+      const wd = await getJson(env, WATCHDOG_KEY);
+      return Response.json({ ok: true, quota: state, watchdog: wd, watchdog_enabled: Boolean(env.GITHUB_DISPATCH_TOKEN) }, { headers: CORS });
     }
     if (url.pathname !== "/live.json") return new Response("Not found", { status: 404, headers: CORS });
 
