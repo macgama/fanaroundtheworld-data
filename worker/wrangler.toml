@@ -12,9 +12,18 @@ crons = ["* * * * *"] # chaque minute
 name = "LIVE"
 class_name = "LiveStore"
 
+# Classement en ligne des fans et des équipes : second Durable Object SQLite.
+[[durable_objects.bindings]]
+name = "CLASSEMENT"
+class_name = "ClassementStore"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["LiveStore"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["ClassementStore"]
 
 [vars]
 # Adresse GitHub Pages du dépôt de données (calendriers publiés par GitHub Actions).
