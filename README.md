@@ -46,6 +46,31 @@ Dans `live.json` seulement, chaque match a aussi `first_goal` : l'équipe qui a 
 
 Les valeurs possibles de `status` sont `SCHEDULED`, `LIVE`, `HALFTIME`, `FINISHED`, `POSTPONED`, `SUSPENDED`, `CANCELLED` et `UNKNOWN`. Les noms d'équipes sont les noms réels. Le jeu les remplace par ses noms fictifs grâce à une table de correspondance indexée par `home.id` et `away.id`.
 
+## Classement en ligne (Worker Cloudflare)
+
+Le même Worker garde le classement des fans et des équipes dans un second Durable Object SQLite (`ClassementStore`, offre gratuite). Code : `src/classement.js`, tests : `test/classement.test.js`.
+
+| Adresse | Rôle |
+|---|---|
+| `POST /classement/envoi` | Le jeu envoie les points de popularité donnés à ses équipes favorites |
+| `GET /classement/equipes.json` | Points de chaque équipe : `{ "af:85": { "p": total, "s": semaine, "f": fans } }` |
+| `GET /classement/fans.json?periode=semaine` ou `total` | Les 50 meilleurs fans |
+| `GET /classement/fan?id=…` | Points et rang d'un fan |
+
+Envoi :
+
+```json
+{ "v": 1, "id": "16 hexa", "cle": "32 hexa", "pseudo": [3, 7, 42], "visible": true,
+  "points": [{ "equipe": "af:85", "points": 20, "raison": "duel", "t": 1794000000 }] }
+```
+
+- **Aucune donnée personnelle.** `id` et `cle` sont tirés au hasard par le jeu ; le serveur ne garde que l'empreinte SHA-256 de la clé. L'adresse IP n'est jamais gardée, seulement son empreinte du jour, pour limiter à 10 le nombre de nouveaux fans par adresse et par jour.
+- **Pas de texte libre** : le pseudo, ce sont deux numéros de mots des listes du jeu et un nombre. Le classement reste familial sans modération.
+- **Contrôles refaits par le serveur** : barème par action (duel 30, suivi 20, prono 20, fan club 30 points au plus par ligne), 200 points par équipe et par jour, 1 000 par fan et par jour, points de moins de 8 jours, un envoi toutes les 20 s au plus.
+- Semaine = semaine ISO (lundi 00:00 UTC). Les compteurs journaliers sont effacés chaque heure (minute 7 du cron).
+
+Déploiement : `npx wrangler deploy` dans `worker/` (la migration `v2` crée le stockage du classement, sans toucher au live).
+
 ## Budget de requêtes API-Football (offre Pro : 7 500 par jour, compte partagé avec thebestfan)
 
 | Usage | Requêtes par jour |

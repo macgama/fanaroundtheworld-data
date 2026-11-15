@@ -1,6 +1,8 @@
 // Worker Cloudflare (offre gratuite, sans carte bancaire) :
 //   - chaque minute (cron) : un tour de live -> live.json gardé dans un Durable Object
 //   - GET /live.json : sert le fichier à tous les joueurs
+//   - /classement/... : classement en ligne des fans et des équipes (src/classement.js),
+//     gardé dans un second Durable Object SQLite (ClassementStore)
 // Le stockage passe par un Durable Object SQLite (inclus dans l'offre gratuite),
 // ce qui évite R2, qui exige une carte bancaire.
 // La clé API-Football est un secret Cloudflare (API_FOOTBALL_KEY).
@@ -10,6 +12,7 @@ import { tick } from "../src/live.js";
 import * as apifootball from "../src/sources/apifootball.js";
 import { fetchJson } from "../src/http.js";
 import { isoDay } from "../src/time.js";
+import { Classement, empreinte } from "../src/classement.js";
 import { watchdog, dispatchWorkflow, CHECK_EVERY_MIN } from "../src/watchdog.js";
 
 const LIVE_KEY = "live.json";
@@ -25,6 +28,67 @@ export class LiveStore extends DurableObject {
   async putText(key, value) {
     await this.ctx.storage.put(key, value);
   }
+}
+
+/** Classement en ligne : une seule instance, base SQLite du Durable Object. */
+export class ClassementStore extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env);
+    const sql = { exec: (q, ...v) => ctx.storage.sql.exec(q, ...v) };
+    this.c = new Classement(sql, (fn) => ctx.storage.transactionSync(fn));
+  }
+  envoyer(envoi, opts) {
+    return this.c.envoyer(envoi, { ...opts, maintenantS: Math.floor(Date.now() / 1000) });
+  }
+  equipes() {
+    return this.c.equipes(Math.floor(Date.now() / 1000));
+  }
+  fans(periode) {
+    return this.c.fans(periode, Math.floor(Date.now() / 1000));
+  }
+  fan(id) {
+    return this.c.fan(id, Math.floor(Date.now() / 1000));
+  }
+  nettoyer() {
+    this.c.nettoyer(Math.floor(Date.now() / 1000));
+  }
+}
+
+const classement = (env) => env.CLASSEMENT.get(env.CLASSEMENT.idFromName("classement"));
+const MAX_CORPS = 32 * 1024;
+
+async function routeClassement(request, env, url) {
+  const json = (corps, statut = 200, cache = "no-store") =>
+    Response.json(corps, { status: statut, headers: { "Cache-Control": cache, ...CORS } });
+  const chemin = url.pathname.slice("/classement/".length);
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: { ...CORS, "Access-Control-Allow-Methods": "GET, POST", "Access-Control-Allow-Headers": "Content-Type" } });
+  }
+  if (chemin === "envoi" && request.method === "POST") {
+    const texte = await request.text();
+    if (texte.length > MAX_CORPS) return json({ ok: false, erreur: "trop_gros" }, 413);
+    let envoi;
+    try {
+      envoi = JSON.parse(texte);
+    } catch {
+      return json({ ok: false, erreur: "json_invalide" }, 400);
+    }
+    if (typeof envoi?.cle !== "string") return json({ ok: false, erreur: "identite_invalide" }, 400);
+    const jour = new Date().toISOString().slice(0, 10);
+    // L'adresse IP n'est jamais gardée : seulement son empreinte du jour (limite de créations de fans).
+    const ip = await empreinte(`${request.headers.get("CF-Connecting-IP") ?? ""}|${jour}`);
+    const hash = await empreinte(envoi.cle);
+    const r = await classement(env).envoyer(envoi, { hash, ip });
+    return json(r.corps, r.statut);
+  }
+  if (request.method !== "GET") return json({ ok: false, erreur: "methode" }, 405);
+  if (chemin === "equipes.json") return json(await classement(env).equipes(), 200, "public, max-age=60");
+  if (chemin === "fans.json") return json(await classement(env).fans(url.searchParams.get("periode")), 200, "public, max-age=60");
+  if (chemin === "fan") {
+    const f = await classement(env).fan(url.searchParams.get("id") ?? "");
+    return f ? json(f) : json({ ok: false, erreur: "inconnu" }, 404);
+  }
+  return json({ ok: false, erreur: "introuvable" }, 404);
 }
 
 const store = (env) => env.LIVE.get(env.LIVE.idFromName("live"));
@@ -66,6 +130,8 @@ const CORS = { "Access-Control-Allow-Origin": "*" };
 export default {
   async scheduled(_event, env, ctx) {
     const nowMs = Date.now();
+    // Classement : ménage des compteurs journaliers, une fois par heure.
+    if (env.CLASSEMENT && new Date(nowMs).getUTCMinutes() === 7) ctx.waitUntil(classement(env).nettoyer());
     ctx.waitUntil(tick({ config, env, nowMs, deps: deps(env, nowMs), log: console.log }));
     // Chien de garde des calendriers (toutes les 15 min, seulement si le jeton GitHub est configuré).
     if (env.GITHUB_DISPATCH_TOKEN && new Date(nowMs).getUTCMinutes() % CHECK_EVERY_MIN === 0) {
@@ -92,6 +158,7 @@ export default {
       const wd = await getJson(env, WATCHDOG_KEY);
       return Response.json({ ok: true, quota: state, watchdog: wd, watchdog_enabled: Boolean(env.GITHUB_DISPATCH_TOKEN) }, { headers: CORS });
     }
+    if (url.pathname.startsWith("/classement/")) return routeClassement(request, env, url);
     if (url.pathname !== "/live.json") return new Response("Not found", { status: 404, headers: CORS });
 
     // Avec un nom de domaine, le cache de Cloudflare absorbe les lectures (inactif sur *.workers.dev).
