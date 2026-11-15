@@ -27,6 +27,8 @@ jobs:
       - run: node src/build.js --out public
         env:
           API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+      - name: Fichiers relus moins souvent (clubs de chaque championnat)
+        run: if [ -d static ]; then cp -r static/. public/; fi
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

@@ -15,6 +15,7 @@ Ce dépôt est public, ce qui rend GitHub Actions gratuit et illimité. Le jeu s
 | `index.json` | Liste des jours disponibles, fournisseur, mention de la source à afficher dans les crédits | toutes les 3 h | GitHub Pages |
 | `competitions.json` | Compétitions suivies | toutes les 3 h | GitHub Pages |
 | `days/AAAA-MM-JJ.json` | Matchs du jour (de la veille à J+7), avec les scores | toutes les 3 h | GitHub Pages |
+| `teams.json` | Clubs de chaque championnat (D1), pour choisir son club favori dans le jeu | chaque lundi (workflow « Équipes », ~170 requêtes) | GitHub Pages (copie de `static/teams.json`) |
 | `live.json` | Matchs en cours + matchs terminés depuis moins de 2 h | chaque minute pendant les matchs | Worker Cloudflare |
 
 Un match a le même `id` dans `days/` et dans `live.json`. Le jeu charge le jour, puis remplace les matchs par leur version de `live.json`.
@@ -50,6 +51,7 @@ Les valeurs possibles de `status` sont `SCHEDULED`, `LIVE`, `HALFTIME`, `FINISHE
 | Usage | Requêtes par jour |
 |---|---|
 | Calendriers : 9 jours × 8 passages | 72 |
+| Clubs des championnats : 170 par semaine (le lundi) | 25 en moyenne |
 | Live : 1 requête par minute, seulement quand un match est en cours | 1 440 au maximum |
 | Scores finaux des matchs qui viennent de se terminer | quelques dizaines |
 | **Total relais** | **environ 1 550 au maximum** |
