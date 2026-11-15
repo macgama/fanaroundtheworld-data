@@ -23,6 +23,21 @@ test("saison en cours et clubs (sans les sélections)", () => {
   assert.deepEqual(teams, [{ id: "af:81", name: "Alpha" }, { id: "af:85", name: "Zed" }]);
 });
 
+test("ville du stade gardée pour repérer les derbys", () => {
+  const teams = parseTeams({
+    response: [
+      { team: { id: 33, name: "B" }, venue: { city: "Manchester" } },
+      { team: { id: 50, name: "A" }, venue: { city: "Manchester, Greater Manchester" } },
+      { team: { id: 9, name: "C" }, venue: { city: null } },
+    ],
+  });
+  assert.deepEqual(teams, [
+    { id: "af:50", name: "A", city: "Manchester" },
+    { id: "af:33", name: "B", city: "Manchester" },
+    { id: "af:9", name: "C" },
+  ]);
+});
+
 test("une ligue en erreur garde son ancienne liste, les coupes sont ignorées", async () => {
   const urls = [];
   const get = async (url) => {

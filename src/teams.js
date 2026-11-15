@@ -23,15 +23,28 @@ export function currentSeasons(data) {
   return out;
 }
 
-/** Clubs d'une réponse /teams (les sélections nationales sont écartées). */
+/**
+ * Clubs d'une réponse /teams (les sélections nationales sont écartées).
+ * `city` (ville du stade) sert au jeu à repérer les derbys : deux clubs du
+ * même championnat dans la même ville. Absente quand la source ne la donne pas.
+ */
 export function parseTeams(data) {
   const out = [];
   for (const r of data?.response ?? []) {
     const t = r.team;
     if (!t?.id || t.national) continue;
-    out.push({ id: `af:${t.id}`, name: t.name ?? "" });
+    const team = { id: `af:${t.id}`, name: t.name ?? "" };
+    const city = cleanCity(r.venue?.city);
+    if (city) team.city = city;
+    out.push(team);
   }
   return out.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** « London, Greater London » → « London » ; vide si rien d'utile. */
+export function cleanCity(city) {
+  if (typeof city !== "string") return "";
+  return city.split(",")[0].trim();
 }
 
 /**
