@@ -71,6 +71,26 @@ Envoi :
 
 Déploiement : `npx wrangler deploy` dans `worker/` (la migration `v2` crée le stockage du classement, sans toucher au live).
 
+## Tournoi des fan clubs (même Worker, même base)
+
+Du vendredi 00:00 au lundi 12:00 (UTC), les fan clubs inscrits jouent au plus 7 duels sur les matchs du week-end
+(chacun sur un match différent et contre un club différent). Code : `src/tournoi.js`, tests : `test/tournoi.test.js`.
+Les tables `t_clubs` et `t_duels` vivent dans la base du `ClassementStore` : aucune nouvelle migration.
+
+| Adresse | Rôle |
+|---|---|
+| `POST /tournoi/inscription` | `{ id, cle, tournoi, nom: [type, complément], couleurs: [c1, c2], niveau }` |
+| `POST /tournoi/adversaire` | Tire un club inscrit pas encore affronté (le moins attaqué, de niveau proche), ou `null` |
+| `POST /tournoi/resultat` | `{ id, cle, tournoi, adversaire: "id" ou "bot:N", match, gagne, stade, evenement }` : points recalculés ici |
+| `GET /tournoi/classement.json?tournoi=AAAA-MM-JJ` | Les 50 meilleurs clubs (le tournoi en cours par défaut) |
+| `GET /tournoi/club?id=…&tournoi=…` | Points, défense, rang d'un club |
+
+- Identité : celle du classement (le fan doit avoir fait un premier envoi, sinon `403 fan_inconnu`).
+- Points : victoire 3, défaite 1, +1 au stade, +1 sur un match spécial ; +1 de « tribune solide » quand un club perd contre le tien (6 au plus).
+- Contrôles : 7 duels, un match et un adversaire une seule fois, un résultat toutes les 30 s, résultats acceptés jusqu'à 1 h après la fin.
+- Nom de tournoi : deux numéros de listes du jeu, aucun texte libre. Les tournois de plus de 5 semaines sont effacés.
+- Les récompenses (Jetons, XP de PASS) sont versées par le jeu d'après le rang final.
+
 ## Budget de requêtes API-Football (offre Pro : 7 500 par jour, compte partagé avec thebestfan)
 
 | Usage | Requêtes par jour |

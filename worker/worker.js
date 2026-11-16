@@ -3,6 +3,7 @@
 //   - GET /live.json : sert le fichier à tous les joueurs
 //   - /classement/... : classement en ligne des fans et des équipes (src/classement.js),
 //     gardé dans un second Durable Object SQLite (ClassementStore)
+//   - /tournoi/... : tournoi des fan clubs du week-end (src/tournoi.js), même base
 // Le stockage passe par un Durable Object SQLite (inclus dans l'offre gratuite),
 // ce qui évite R2, qui exige une carte bancaire.
 // La clé API-Football est un secret Cloudflare (API_FOOTBALL_KEY).
@@ -13,6 +14,7 @@ import * as apifootball from "../src/sources/apifootball.js";
 import { fetchJson } from "../src/http.js";
 import { isoDay } from "../src/time.js";
 import { Classement, empreinte } from "../src/classement.js";
+import { Tournoi } from "../src/tournoi.js";
 import { watchdog, dispatchWorkflow, CHECK_EVERY_MIN } from "../src/watchdog.js";
 
 const LIVE_KEY = "live.json";
@@ -36,6 +38,13 @@ export class ClassementStore extends DurableObject {
     super(ctx, env);
     const sql = { exec: (q, ...v) => ctx.storage.sql.exec(q, ...v) };
     this.c = new Classement(sql, (fn) => ctx.storage.transactionSync(fn));
+    this.t = new Tournoi(sql, (fn) => ctx.storage.transactionSync(fn));
+  }
+  tournoi(action, corps, opts) {
+    const maintenantS = Math.floor(Date.now() / 1000);
+    if (action === "classement") return this.t.classement(corps, maintenantS);
+    if (action === "club") return this.t.club(corps.id, corps.tournoi);
+    return this.t[action](corps, { ...opts, maintenantS });
   }
   envoyer(envoi, opts) {
     return this.c.envoyer(envoi, { ...opts, maintenantS: Math.floor(Date.now() / 1000) });
@@ -51,6 +60,7 @@ export class ClassementStore extends DurableObject {
   }
   nettoyer() {
     this.c.nettoyer(Math.floor(Date.now() / 1000));
+    this.t.nettoyer(Math.floor(Date.now() / 1000));
   }
 }
 
@@ -87,6 +97,40 @@ async function routeClassement(request, env, url) {
   if (chemin === "fan") {
     const f = await classement(env).fan(url.searchParams.get("id") ?? "");
     return f ? json(f) : json({ ok: false, erreur: "inconnu" }, 404);
+  }
+  return json({ ok: false, erreur: "introuvable" }, 404);
+}
+
+const ACTIONS_TOURNOI = { inscription: "inscrire", adversaire: "adversaire", resultat: "resultat" };
+
+async function routeTournoi(request, env, url) {
+  const json = (corps, statut = 200, cache = "no-store") =>
+    Response.json(corps, { status: statut, headers: { "Cache-Control": cache, ...CORS } });
+  const chemin = url.pathname.slice("/tournoi/".length);
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: { ...CORS, "Access-Control-Allow-Methods": "GET, POST", "Access-Control-Allow-Headers": "Content-Type" } });
+  }
+  if (request.method === "POST" && ACTIONS_TOURNOI[chemin]) {
+    const texte = await request.text();
+    if (texte.length > 4096) return json({ ok: false, erreur: "trop_gros" }, 413);
+    let corps;
+    try {
+      corps = JSON.parse(texte);
+    } catch {
+      return json({ ok: false, erreur: "json_invalide" }, 400);
+    }
+    if (typeof corps?.cle !== "string") return json({ ok: false, erreur: "identite_invalide" }, 400);
+    const hash = await empreinte(corps.cle);
+    const r = await classement(env).tournoi(ACTIONS_TOURNOI[chemin], corps, { hash });
+    return json(r.corps, r.statut);
+  }
+  if (request.method !== "GET") return json({ ok: false, erreur: "methode" }, 405);
+  if (chemin === "classement.json") {
+    return json(await classement(env).tournoi("classement", url.searchParams.get("tournoi")), 200, "public, max-age=60");
+  }
+  if (chemin === "club") {
+    const c = await classement(env).tournoi("club", { id: url.searchParams.get("id") ?? "", tournoi: url.searchParams.get("tournoi") ?? "" });
+    return c ? json(c) : json({ ok: false, erreur: "inconnu" }, 404);
   }
   return json({ ok: false, erreur: "introuvable" }, 404);
 }
@@ -159,6 +203,7 @@ export default {
       return Response.json({ ok: true, quota: state, watchdog: wd, watchdog_enabled: Boolean(env.GITHUB_DISPATCH_TOKEN) }, { headers: CORS });
     }
     if (url.pathname.startsWith("/classement/")) return routeClassement(request, env, url);
+    if (url.pathname.startsWith("/tournoi/")) return routeTournoi(request, env, url);
     if (url.pathname !== "/live.json") return new Response("Not found", { status: 404, headers: CORS });
 
     // Avec un nom de domaine, le cache de Cloudflare absorbe les lectures (inactif sur *.workers.dev).
