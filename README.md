@@ -91,6 +91,28 @@ Les tables `t_clubs` et `t_duels` vivent dans la base du `ClassementStore` : auc
 - Nom de tournoi : deux numéros de listes du jeu, aucun texte libre. Les tournois de plus de 5 semaines sont effacés.
 - Les récompenses (Jetons, XP de PASS) sont versées par le jeu d'après le rang final.
 
+## Ligue des tribunes (même Worker, même base)
+
+Saisons d'un mois. Les journées sont les week-ends dont le vendredi tombe dans le mois (4 ou 5), du vendredi 00:00
+au lundi 12:00 (UTC). 5 divisions en poules de 10 ; les places vides sont prises par des clubs du jeu dont les points
+avancent tout seuls (calcul sans aléatoire, le même que dans le jeu). Fin de saison : les 2 premiers montent, les 2
+derniers descendent. Code : `src/ligue.js`, tests : `test/ligue.test.js`. Tables `l_clubs`, `l_rapports`, `l_duels`
+dans la base du `ClassementStore` : aucune nouvelle migration.
+
+| Adresse | Rôle |
+|---|---|
+| `POST /ligue/inscription` | `{ id, cle, saison: "AAAA-MM", nom: [type, complément], couleurs: [c1, c2], niveau }` : place dans sa division (montée/descente de la saison d'avant) |
+| `POST /ligue/resultat` | `{ id, cle, saison, code, adversaire: "id" ou "bot:N", match, gagne, direct }` |
+| `GET /ligue/club?id=…&saison=…` | Division, poule, points, rang, mouvement, et `comptes` (code -> points) |
+| `GET /ligue/poule.json?id=…&saison=…` | La poule de ce club, clubs du jeu compris, triée |
+
+- Duel en ligne : les deux joueurs envoient leur résultat avec le même `code` (tiré par l'hôte). Il compte quand les deux
+  sont arrivés et concordent (un gagnant, ou deux perdants = nul). Deux gagnants : il ne compte pour personne.
+- Contre un club du jeu de sa poule : compte tout de suite, 3 par journée au plus.
+- Points : victoire 3, nul 2, défaite 1, +1 si le vrai match était en direct. Par journée : 6 duels, 2 au plus contre le même adversaire.
+- Résultats acceptés pendant la journée et 1 h après ; un résultat toutes les 20 s. Saisons gardées 4 mois.
+- Les récompenses de fin de saison (Jetons, XP de PASS) sont versées par le jeu d'après le rang final.
+
 ## Budget de requêtes API-Football (offre Pro : 7 500 par jour, compte partagé avec thebestfan)
 
 | Usage | Requêtes par jour |
