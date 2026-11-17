@@ -42,9 +42,11 @@ export class ClassementStore extends DurableObject {
     this.c = new Classement(sql, (fn) => ctx.storage.transactionSync(fn));
     this.t = new Tournoi(sql, (fn) => ctx.storage.transactionSync(fn));
     this.l = new Ligue(sql, (fn) => ctx.storage.transactionSync(fn));
+    // Tests seulement (wrangler dev --var DECALAGE_TEST_S:…) : la Ligue fait comme si on était plus tard.
+    this.decalageLigue = Number(env.DECALAGE_TEST_S ?? 0) || 0;
   }
   ligue(action, corps, opts) {
-    const maintenantS = Math.floor(Date.now() / 1000);
+    const maintenantS = Math.floor(Date.now() / 1000) + this.decalageLigue;
     if (action === "club") return this.l.club(corps.id, corps.saison, maintenantS);
     if (action === "poule") {
       const c = this.l.club(corps.id, corps.saison, maintenantS);

@@ -129,8 +129,17 @@ export function fnv(texte) {
   return h >>> 0;
 }
 
+/** Mélange final (celui de MurmurHash3) : des clés voisines donnent des clubs bien différents. */
+export function melange(h) {
+  h = (h ^ (h >>> 16)) >>> 0;
+  h = Math.imul(h, 0x85ebca6b) >>> 0;
+  h = (h ^ (h >>> 13)) >>> 0;
+  h = Math.imul(h, 0xc2b2ae35) >>> 0;
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
 export function bot(saison, division, poule, k) {
-  const h = fnv(`${saison}|${division}|${poule}|${k}`);
+  const h = melange(fnv(`${saison}|${division}|${poule}|${k}`));
   const c1 = (h >>> 4) % COULEURS_BOTS;
   const c2 = (c1 + 1 + ((h >>> 12) % (COULEURS_BOTS - 1))) % COULEURS_BOTS;
   return {

@@ -112,6 +112,7 @@ dans la base du `ClassementStore` : aucune nouvelle migration.
 - Points : victoire 3, nul 2, défaite 1, +1 si le vrai match était en direct. Par journée : 6 duels, 2 au plus contre le même adversaire.
 - Résultats acceptés pendant la journée et 1 h après ; un résultat toutes les 20 s. Saisons gardées 4 mois.
 - Les récompenses de fin de saison (Jetons, XP de PASS) sont versées par le jeu d'après le rang final.
+- Test avec le jeu pendant une journée : `npx wrangler dev --var DECALAGE_TEST_S:<secondes>` décale l'heure de la Ligue (jamais en production), voir `docs/ligue.md` du jeu.
 
 ## Budget de requêtes API-Football (offre Pro : 7 500 par jour, compte partagé avec thebestfan)
 

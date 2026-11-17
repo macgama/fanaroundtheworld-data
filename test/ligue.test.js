@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { Classement, empreinte } from "../src/classement.js";
 import {
-  Ligue, calendrier, journees, avancee, fnv, bot, pointsBot, pointsDuel, mouvement, saisonPrecedente,
+  Ligue, calendrier, journees, avancee, fnv, melange, bot, pointsBot, pointsDuel, mouvement, saisonPrecedente,
   TAILLE_POULE, DIVISIONS, DUELS_JOURNEE, BOTS_JOURNEE,
 } from "../src/ligue.js";
 
@@ -56,9 +56,10 @@ test("clubs du jeu : calcul identique au jeu", () => {
   assert.equal(fnv("a"), 0xe40c292c);
   // Valeurs reprises dans tests/test_ligue.gd du jeu : les deux doivent rester égales.
   assert.equal(fnv("2026-11|5|0|3"), 317649862);
+  assert.equal(melange(317649862), 1099028920);
   const b = bot("2026-11", 5, 0, 3);
-  assert.deepEqual([b.nom, b.couleurs, b.force], [[14, 2], [6, 4], 869]);
-  assert.equal(pointsBot(b, "2026-11", SAM), Math.floor((869 * 12 * 1285) / 1_000_000));
+  assert.deepEqual([b.nom, b.couleurs, b.force], [[1, 8], [7, 8], 731]);
+  assert.equal(pointsBot(b, "2026-11", SAM), Math.floor((731 * 12 * 1285) / 1_000_000));
   assert.equal(pointsDuel(1, true), 4);
   assert.equal(pointsDuel(0, false), 2);
   assert.equal(pointsDuel(-1, false), 1);
